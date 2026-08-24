@@ -27,15 +27,28 @@ recordButton.addEventListener('click', () => {
 					} 
 				};
 				
-				mediaRecorder.onstop = () => {
+				// use async here because fetch() is asynchronous and we want to use await
+				mediaRecorder.onstop = async () => {
 					console.log('Recording Finished')
 					const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
 					console.log(mediaRecorder.mimeType);
 					const recordingURL = URL.createObjectURL(blob);
 					audioPlayer.src = recordingURL;
 					
+					// connecting to java endpoint
+					const formData = new FormData();
+					formData.append("audio", blob, "recording.webm");
+					// http request
+					const response = await fetch("/api/transcriptions", {
+						method: "POST",
+						body: formData
+					});
+					
+					const result = await response.text();
+					console.log('connection established? ', result); // test connection establishment
 					
 					
+					// debugging
 					console.log('blob size:', blob.size);
 					console.log('blob type:', blob.type);
 					console.log('player src:', audioPlayer.src);
@@ -49,9 +62,10 @@ recordButton.addEventListener('click', () => {
 				stopButton.disabled = false
 				
 				recordButton.innerHTML = 'Recording';
-				// testing if button disables
-				console.log(recordButton.disabled);
-				console.log(stopButton.disabled);
+				// testing if button disables (debugging)
+					console.log('record disabled?', recordButton.disabled);
+					console.log('stop disabled? ', stopButton.disabled);
+					
 			} catch (error) {
 				// if user denies or no mic found
 				if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -68,15 +82,18 @@ recordButton.addEventListener('click', () => {
 	
 // stop button
 stopButton.addEventListener('click', () => {
-	mediaRecorder.stop()
+	mediaRecorder.stop() // stop recording
 	
+	// restore function abilities
 	recordButton.disabled = false
 	stopButton.disabled = true
 	
-	// testing if button disables
-	console.log(recordButton.disabled);
-	console.log(stopButton.disabled);
+	// testing if button disables (debugging)
+	console.log('record disabled?', recordButton.disabled);
+	console.log('stop disabled? ', stopButton.disabled);
 	
 	recordButton.innerHTML = 'Record';
+	
+	
 	
 })
