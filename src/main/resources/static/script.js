@@ -13,6 +13,9 @@ const audioPlayer = document.getElementById('recorded-audio');
 recordButton.addEventListener('click', () => {
 		// test: console.log("Hello")
 		
+		// remove any previous text
+		transcriptionResult.textContent = '';
+		
 		async function requestMicAccess() {
 			try {
 				// audio permission request
@@ -45,6 +48,7 @@ recordButton.addEventListener('click', () => {
 					});
 					
 					const result = await response.text();
+					transcriptionResult.textContent = result;
 					console.log('connection established? ', result); // test connection establishment
 					
 					
@@ -94,6 +98,6 @@ stopButton.addEventListener('click', () => {
 	
 	recordButton.innerHTML = 'Record';
 	
-	
-	
 })
+
+const transcriptionResult = document.getElementById('transcription-result');
