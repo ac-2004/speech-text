@@ -28,7 +28,7 @@ public class TranscriptionClient {
 	}
 	
 	
-	public Mono<String> transcribe(AudioData audio) {
+	public Mono<TranscriptionResponse> transcribe(AudioData audio) {
 		
 		// build multipart/form-data request
 		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
@@ -51,8 +51,7 @@ public class TranscriptionClient {
 		        .headers(headers -> headers.setBearerAuth(apiKey))
 		        .bodyValue(bodyBuilder.build())
 		        .retrieve()
-		        .bodyToMono(TranscriptionResponse.class)
-		        .map(response -> response.text());
+		        .bodyToMono(TranscriptionResponse.class);
 	}
 }
 

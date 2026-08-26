@@ -1,5 +1,5 @@
 package comp3011.assignment1.model;
 
-public record TranscriptionResponse(String text) {
+public record TranscriptionResponse(String text, TranscriptionUsage usage) {
 
 }
