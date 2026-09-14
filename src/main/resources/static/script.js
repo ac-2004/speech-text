@@ -1,103 +1,288 @@
 let mediaRecorder;
+let microphoneStream;
+let recordedChunks = [];
+let recordingUrl;
+let recordingTimeout;
 
-let recordButton = document.getElementById('record-button');
+// Maximum recording length in milliseconds.
+const MAX_RECORDING_DURATION = 60_000;
 
-let stopButton = document.getElementById('stop-button');
-
-let recordedChunks = []
-
-// for audio player
+// Get the main page elements.
+const recordButton = document.getElementById('record-button');
+const stopButton = document.getElementById('stop-button');
 const audioPlayer = document.getElementById('recorded-audio');
+const transcriptionResult = document.getElementById('transcription-result');
+const recordingStatus = document.getElementById('recording-status');
+
 
 // clicking record button
-recordButton.addEventListener('click', () => {
-		// test: console.log("Hello")
-		
-		// remove any previous text
-		transcriptionResult.textContent = '';
-		
-		async function requestMicAccess() {
-			try {
-				// audio permission request
-				const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-				console.log("access for mic granted")
-				mediaRecorder = new MediaRecorder(stream);
-				
-				// collecting data chunks
-				mediaRecorder.ondataavailable = (event) => {
-					if (event.data.size > 0) {
-						recordedChunks.push(event.data);
-					} 
-				};
-				
-				// use async here because fetch() is asynchronous and we want to use await
-				mediaRecorder.onstop = async () => {
-					console.log('Recording Finished')
-					const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
-					console.log(mediaRecorder.mimeType);
-					const recordingURL = URL.createObjectURL(blob);
-					audioPlayer.src = recordingURL;
-					
-					// connecting to java endpoint
-					const formData = new FormData();
-					formData.append("audio", blob, "recording.webm");
-					// http request
-					const response = await fetch("/api/transcriptions", {
-						method: "POST",
-						body: formData
-					});
-					
-					const result = await response.text();
-					transcriptionResult.textContent = result;
-					console.log('connection established? ', result); // test connection establishment
-					
-					
-					// debugging
-					console.log('blob size:', blob.size);
-					console.log('blob type:', blob.type);
-					console.log('player src:', audioPlayer.src);
-				}
-				
-				// clear chunks for next session
-				recordedChunks = [];
-				mediaRecorder.start();
-				
-				recordButton.disabled = true
-				stopButton.disabled = false
-				
-				recordButton.innerHTML = 'Recording';
-				// testing if button disables (debugging)
-					console.log('record disabled?', recordButton.disabled);
-					console.log('stop disabled? ', stopButton.disabled);
-					
-			} catch (error) {
-				// if user denies or no mic found
-				if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-					console.error("user denied access")
-				} else if (error.name === 'NotFoundError' || error.name === 'DeviceNotFoundError') {
-					console.error('no mic device found on system');
-				} else {
-					console.error('mic error', error);
-				}
-			}
-		}
-		requestMicAccess();
-	})
-	
+recordButton.addEventListener('click', async () => {
+
+    // Remove any previous transcription.
+    transcriptionResult.textContent = '';
+
+    // Disable buttons while microphone permission is being requested.
+    recordButton.disabled = true;
+    stopButton.disabled = true;
+
+    recordingStatus.textContent = 'Requesting microphone access...';
+
+    try {
+
+        // Check that the browser supports microphone recording.
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Microphone recording is not supported by this browser.');
+        }
+
+        // Request microphone permission.
+        microphoneStream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
+
+        console.log('Microphone access granted');
+
+        // Use WebM with Opus compression when supported.
+        const mimeType = getSupportedMimeType();
+
+        if (mimeType) {
+            mediaRecorder = new MediaRecorder(
+                microphoneStream,
+                { mimeType: mimeType }
+            );
+        } else {
+            mediaRecorder = new MediaRecorder(microphoneStream);
+        }
+
+        // Clear chunks from any previous recording.
+        recordedChunks = [];
+
+        // Collect audio data while recording.
+        mediaRecorder.ondataavailable = (event) => {
+
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+
+
+        // Runs after recording has stopped.
+        mediaRecorder.onstop = async () => {
+
+            // Stop using the physical microphone.
+            stopMicrophone();
+
+            // Clear the automatic recording timer.
+            clearTimeout(recordingTimeout);
+
+            recordingStatus.textContent = 'Transcribing...';
+
+            // Create the recorded audio file.
+            const blob = new Blob(
+                recordedChunks,
+                { type: mediaRecorder.mimeType }
+            );
+
+            // Remove the old audio URL before creating a new one.
+            if (recordingUrl) {
+                URL.revokeObjectURL(recordingUrl);
+            }
+
+            recordingUrl = URL.createObjectURL(blob);
+            audioPlayer.src = recordingUrl;
+
+            try {
+
+                // Send the audio file to the Java backend.
+                const formData = new FormData();
+
+                formData.append(
+                    'audio',
+                    blob,
+                    'recording.webm'
+                );
+
+                const response = await fetch('/api/transcriptions', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Read the server response once.
+                const result = await response.text();
+
+                // Handle HTTP errors instead of displaying raw JSON.
+                if (!response.ok) {
+
+                    console.error(
+                        'Transcription request failed:',
+                        response.status,
+                        result
+                    );
+
+                    throw new Error(
+                        `Server returned HTTP ${response.status}`
+                    );
+                }
+
+                // Display the completed transcription.
+                transcriptionResult.textContent = result;
+
+                recordingStatus.textContent =
+                    'Transcription complete';
+
+            } catch (error) {
+
+                console.error(
+                    'Transcription error:',
+                    error
+                );
+
+                transcriptionResult.textContent =
+                    'Unable to transcribe the recording. Please try again.';
+
+                recordingStatus.textContent =
+                    'Transcription failed';
+
+            } finally {
+
+                // Allow another recording once processing is finished.
+                recordButton.disabled = false;
+                stopButton.disabled = true;
+
+                recordButton.textContent = 'Record';
+            }
+        };
+
+
+        // Start recording.
+        mediaRecorder.start();
+
+        recordingStatus.textContent =
+            'Recording in progress...';
+		console.log('recordingStatus element:', recordingStatus);
+
+        recordButton.disabled = true;
+        stopButton.disabled = false;
+
+        recordButton.textContent = 'Recording';
+
+
+        // Automatically stop very long recordings.
+        recordingTimeout = setTimeout(() => {
+
+            if (
+                mediaRecorder &&
+                mediaRecorder.state === 'recording'
+            ) {
+                stopRecording();
+
+                recordingStatus.textContent =
+                    'Maximum recording time reached. Transcribing...';
+            }
+
+        }, MAX_RECORDING_DURATION);
+
+
+    } catch (error) {
+
+        // Handle microphone permission and device errors.
+        handleMicrophoneError(error);
+
+        stopMicrophone();
+
+        recordButton.disabled = false;
+        stopButton.disabled = true;
+
+        recordButton.textContent = 'Record';
+    }
+});
+
+
 // stop button
 stopButton.addEventListener('click', () => {
-	mediaRecorder.stop() // stop recording
-	
-	// restore function abilities
-	recordButton.disabled = false
-	stopButton.disabled = true
-	
-	// testing if button disables (debugging)
-	console.log('record disabled?', recordButton.disabled);
-	console.log('stop disabled? ', stopButton.disabled);
-	
-	recordButton.innerHTML = 'Record';
-	
-})
 
-const transcriptionResult = document.getElementById('transcription-result');
+    stopRecording();
+
+});
+
+
+// Stops the current recording safely.
+function stopRecording() {
+
+    if (
+        mediaRecorder &&
+        mediaRecorder.state === 'recording'
+    ) {
+
+        mediaRecorder.stop();
+
+        recordButton.disabled = true;
+        stopButton.disabled = true;
+
+        recordButton.textContent = 'Record';
+
+        recordingStatus.textContent = 'Transcribing...';
+    }
+}
+
+
+// Stop all microphone tracks so the browser releases the microphone.
+function stopMicrophone() {
+
+    if (microphoneStream) {
+
+        microphoneStream.getTracks().forEach(track => {
+            track.stop();
+        });
+
+        microphoneStream = null;
+    }
+}
+
+
+// Choose an efficient audio format supported by the browser.
+function getSupportedMimeType() {
+
+    const supportedTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm'
+    ];
+
+    for (const type of supportedTypes) {
+
+        if (MediaRecorder.isTypeSupported(type)) {
+            return type;
+        }
+    }
+
+    // Let the browser choose its default if WebM is unavailable.
+    return '';
+}
+
+
+// Show useful microphone errors to the user.
+function handleMicrophoneError(error) {
+
+    if (
+        error.name === 'NotAllowedError' ||
+        error.name === 'PermissionDeniedError'
+    ) {
+
+        recordingStatus.textContent =
+            'Microphone access was denied. Please allow microphone access and try again.';
+
+    } else if (
+        error.name === 'NotFoundError' ||
+        error.name === 'DeviceNotFoundError'
+    ) {
+
+        recordingStatus.textContent =
+            'No microphone was found on this device.';
+
+    } else {
+
+        recordingStatus.textContent =
+            'Unable to access the microphone. Please try again.';
+
+        console.error('Microphone error:', error);
+    }
+}

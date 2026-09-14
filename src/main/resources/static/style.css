@@ -1,0 +1,165 @@
+/* Basic page setup */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    color: #1f2937;
+}
+
+
+/* Centres the application on the page */
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+}
+
+
+/* Main application panel */
+.transcription-card {
+    width: 100%;
+    max-width: 700px;
+    background: white;
+    border-radius: 16px;
+    padding: 36px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+
+/* Header */
+.app-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.app-header h1 {
+    margin: 0 0 10px;
+    font-size: 2rem;
+}
+
+.app-description {
+    margin: 0;
+    color: #6b7280;
+}
+
+
+/* Recording buttons */
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.button {
+    min-width: 150px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background-color 0.2s ease,
+        transform 0.1s ease;
+}
+
+.button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.button:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 3px;
+}
+
+.button-primary {
+    background: #2563eb;
+    color: white;
+}
+
+.button-primary:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.button-secondary {
+    background: #dc2626;
+    color: white;
+}
+
+.button-secondary:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+.button:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+
+/* Recording/transcription status */
+.status-message {
+    min-height: 24px;
+    margin: 20px 0;
+    text-align: center;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+
+/* Audio and transcription sections */
+.audio-section,
+.result-section {
+    margin-top: 28px;
+}
+
+.audio-section h2,
+.result-section h2 {
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+}
+
+audio {
+    width: 100%;
+}
+
+
+/* Transcription result area */
+.transcription-output {
+    min-height: 120px;
+    padding: 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+#transcription-result {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+
+/* Responsive layout */
+@media (max-width: 600px) {
+
+    .transcription-card {
+        padding: 24px 18px;
+    }
+
+    .controls {
+        flex-direction: column;
+    }
+
+    .button {
+        width: 100%;
+    }
+}

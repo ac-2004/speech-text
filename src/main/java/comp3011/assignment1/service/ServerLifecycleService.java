@@ -3,6 +3,7 @@ package comp3011.assignment1.service;
 import java.time.Duration;
 
 
+
 import java.time.Instant;
 import org.springframework.stereotype.Service;
 import comp3011.assignment1.model.UptimeResponse;
@@ -13,6 +14,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 //Provides a thread-safe flag for tracking whether shutdown has begun.
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class ServerLifecycleService {
 	private final Instant serverStartTime;
@@ -22,6 +26,9 @@ public class ServerLifecycleService {
 	// even if multiple requests arrive concurrently.
 	private final AtomicBoolean shutdownInProgress =
 	        new AtomicBoolean(false);
+	
+	private static final Logger logger =
+	        LoggerFactory.getLogger(ServerLifecycleService.class);
 	
 	
 	public ServerLifecycleService(ConfigurableApplicationContext applicationContext) {
@@ -54,8 +61,11 @@ public class ServerLifecycleService {
 	    // If another request has already changed the flag to true,
 	    // this request must be rejected.
 	    if (!shutdownInProgress.compareAndSet(false, true)) {
+	    		logger.warn("Shutdown request rejected because shutdown is already in progress");
 	        return false;
 	    }
+	    
+	    logger.info("Graceful shutdown requested");
 
 	    // Run shutdown separately so the controller has time
 	    // to return the HTTP 202 response to the client.
@@ -65,6 +75,8 @@ public class ServerLifecycleService {
 
 	            // Ask Spring to close the application cleanly.
 	            int exitCode = SpringApplication.exit(applicationContext);
+	            
+	            logger.info("Application shutdown initiated");
 
 	            // Terminate the JVM once Spring has completed its shutdown work.
 	            System.exit(exitCode);
@@ -73,6 +85,8 @@ public class ServerLifecycleService {
 
 	            // Restore the interrupted status instead of silently swallowing it.
 	            Thread.currentThread().interrupt();
+	            
+	            logger.error("Shutdown thread was interrupted");
 	        }
 	    });
 

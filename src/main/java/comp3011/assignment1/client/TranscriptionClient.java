@@ -18,13 +18,16 @@ import comp3011.assignment1.model.TranscriptionResponse;
 public class TranscriptionClient {
 	private final WebClient webClient;
 	private final String apiKey;
+	private final String transcriptionUrl;
 	
 	public TranscriptionClient(
 			WebClient webClient, 
-			@Value("${openai.api.key}") String apiKey) {
+			@Value("${openai.api.key}") String apiKey,
+			@Value("${openai.transcription.url}") String transcriptionUrl) {
 		
 		this.webClient = webClient;
 		this.apiKey = apiKey;
+		this.transcriptionUrl = transcriptionUrl;
 	}
 	
 	
@@ -47,7 +50,7 @@ public class TranscriptionClient {
 		
 		// send request asynchronously
 		return webClient.post()
-		        .uri("/v1/audio/transcriptions")
+		        .uri(transcriptionUrl)
 		        .headers(headers -> headers.setBearerAuth(apiKey))
 		        .bodyValue(bodyBuilder.build())
 		        .retrieve()
