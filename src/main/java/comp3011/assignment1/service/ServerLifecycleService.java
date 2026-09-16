@@ -1,5 +1,8 @@
 package comp3011.assignment1.service;
 
+//tracks server uptime and coordinates graceful application shutdown.
+//shutdown state is shared safely when multiple admin requests arrive together.
+
 import java.time.Duration;
 import java.time.Instant;
 //Provides a thread-safe flag for tracking whether shutdown has begun.
@@ -19,8 +22,7 @@ public class ServerLifecycleService {
 	private final Instant serverStartTime;
 	private final ConfigurableApplicationContext applicationContext;
 
-	// Ensures only one shutdown request can be accepted,
-	// even if multiple requests arrive concurrently.
+	// Ensures only one shutdown request can be accepted, even if multiple requests arrive concurrently.
 	private final AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
 
 	private static final Logger logger = LoggerFactory.getLogger(ServerLifecycleService.class);

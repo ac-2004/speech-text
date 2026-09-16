@@ -1,5 +1,9 @@
 package comp3011.assignment1.concurrency;
 
+//load regression test that sends 250 concurrent http transcription requests.
+//blocking work is simulated to check the application stays responsive under contention.
+
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,7 +47,7 @@ class TranscriptionConcurrencyTest {
 
 		int requestCount = 250;
 
-		// Simulate an asynchronous STT operation.
+		// simulate blocking downstream work on a scheduler intended for blocking tasks
 		when(transcriptionService.transcribe(any(AudioData.class))).thenAnswer(invocation -> Mono.fromCallable(() -> {
 
 			// Simulate a blocking external operation.
@@ -53,7 +57,7 @@ class TranscriptionConcurrencyTest {
 
 		}).subscribeOn(Schedulers.boundedElastic()));
 
-		// Allow the test client to maintain enough concurrent connections.
+		// give the load client enough connections to create the intended concurrency
 		ConnectionProvider connectionProvider = ConnectionProvider.builder("concurrency-test-pool")
 				.maxConnections(requestCount).pendingAcquireMaxCount(requestCount)
 				.pendingAcquireTimeout(Duration.ofSeconds(10)).build();
@@ -86,7 +90,7 @@ class TranscriptionConcurrencyTest {
 			requests.add(request);
 		}
 
-		// Wait for every request to complete.
+		// wait until every in-flight request has completed
 		CompletableFuture.allOf(requests.toArray(new CompletableFuture<?>[0])).join();
 
 		long elapsedMillis = (System.nanoTime() - startTime) / 1_000_000;
@@ -98,7 +102,7 @@ class TranscriptionConcurrencyTest {
 
 		assertEquals(requestCount, requests.size());
 
-		// Generous threshold to detect major concurrency regressions.
+		// threshold to detect major concurrency regressions.
 		assertTrue(elapsedMillis < 15_000, "Concurrent requests took too long: " + elapsedMillis + " ms");
 
 		// Clean up the client's connection pool.

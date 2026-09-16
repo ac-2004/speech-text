@@ -1,3 +1,7 @@
+// handles browser audio recording, playback and transcription requests.
+// manages microphone access, recording state and user-facing errors.
+
+// setting variables
 let mediaRecorder;
 let microphoneStream;
 let recordedChunks = [];
@@ -160,6 +164,7 @@ recordButton.addEventListener('click', async () => {
             'Recording in progress...';
         console.log('recordingStatus element:', recordingStatus);
 
+		// record button disables when recording starts. stop button  made active.
         recordButton.disabled = true;
         stopButton.disabled = false;
 

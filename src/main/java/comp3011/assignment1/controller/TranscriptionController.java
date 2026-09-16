@@ -1,5 +1,8 @@
 package comp3011.assignment1.controller;
 
+//accepts uploaded browser audio and passes it to the transcription service.
+//the transcription result is returned asynchronously as a mono.
+
 import java.io.IOException;
 
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +29,7 @@ public class TranscriptionController {
 	@PostMapping("/api/transcriptions")
 	public Mono<String> receiveAudio(@RequestParam("audio") MultipartFile audio) {
 		try {
+			// copy the uploaded file into a small model before passing it to the service
 			AudioData audioData = new AudioData(audio.getBytes(), audio.getOriginalFilename(), audio.getContentType());
 
 			Mono<String> result = transcriptionService.transcribe(audioData);

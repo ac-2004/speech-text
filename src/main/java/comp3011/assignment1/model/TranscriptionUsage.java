@@ -1,5 +1,7 @@
 package comp3011.assignment1.model;
 
+//maps the input and output token usage returned by the speech-to-text api.
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record TranscriptionUsage(@JsonProperty("input_tokens") long inputTokens,

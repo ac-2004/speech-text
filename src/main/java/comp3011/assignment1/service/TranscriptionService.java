@@ -1,5 +1,8 @@
 package comp3011.assignment1.service;
 
+//coordinates transcription requests between the external client and global statistics.
+//it also records the main operational events without logging sensitive content.
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,7 +27,11 @@ public class TranscriptionService {
 		logger.info("Transcription request started");
 
 		return transcriptionClient.transcribe(audio).map(response -> {
-			globalStatisticsService.addUsage(response.usage().inputTokens(), response.usage().outputTokens());
+			// record token usage only after a successful transcription
+			globalStatisticsService.addUsage(
+					response.usage().inputTokens(), 
+					response.usage().outputTokens()
+			);
 			logger.info("Transcription request completed");
 
 			return response.text();

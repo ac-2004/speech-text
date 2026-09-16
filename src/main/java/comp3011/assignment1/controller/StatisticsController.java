@@ -1,5 +1,7 @@
 package comp3011.assignment1.controller;
 
+//provides the end-point used to return global transcription token statistics.
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 

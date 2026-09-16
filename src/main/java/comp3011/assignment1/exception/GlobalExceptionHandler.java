@@ -1,5 +1,7 @@
 package comp3011.assignment1.exception;
 
+//handles rest exceptions in one place and returns the standard api error response.
+
 import java.time.Instant;
 
 import org.springframework.http.HttpStatus;
@@ -17,21 +19,29 @@ public class GlobalExceptionHandler {
 	// Handles the specific case where shutdown has already started.
 	// This response matches the 409 contract defined in the OpenAPI YAML.
 	@ExceptionHandler(ShutdownInProgressException.class)
-	public ResponseEntity<ErrorResponse> handleShutdownInProgress(ShutdownInProgressException exception,
+	public ResponseEntity<ErrorResponse> handleShutdownInProgress(
+			ShutdownInProgressException exception,
 			HttpServletRequest request) {
 
-		ErrorResponse response = new ErrorResponse(Instant.now(), HttpStatus.CONFLICT.value(),
-				HttpStatus.CONFLICT.getReasonPhrase(), exception.getMessage(), request.getRequestURI());
+		ErrorResponse response = new ErrorResponse(Instant.now(), 
+				HttpStatus.CONFLICT.value(),
+				HttpStatus.CONFLICT.getReasonPhrase(), 
+				exception.getMessage(), 
+				request.getRequestURI());
 
-		return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+		return ResponseEntity
+				.status(HttpStatus.CONFLICT).body(response);
 	}
 
 	// Handles unexpected exceptions using the standard YAML ErrorResponse shape.
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception, HttpServletRequest request) {
+	public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception, 
+			HttpServletRequest request) {
 
-		ErrorResponse response = new ErrorResponse(Instant.now(), HttpStatus.INTERNAL_SERVER_ERROR.value(),
-				HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), "An unexpected server error occurred.",
+		ErrorResponse response = new ErrorResponse(Instant.now(), 
+				HttpStatus.INTERNAL_SERVER_ERROR.value(),
+				HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), 
+				"An unexpected server error occurred.",
 				request.getRequestURI());
 
 		// Return HTTP 500 with the structured JSON error body.

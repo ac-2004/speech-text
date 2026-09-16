@@ -1,5 +1,8 @@
 package comp3011.assignment1.controller;
 
+//mvc regression tests for the uptime and graceful shutdown admin endpoints. Test remains focused and avoids starting the whole application.
+
+
 import static org.mockito.Mockito.times;
 //Lets Mockito verify that the controller actually asked
 //the lifecycle service to begin shutdown.
@@ -27,18 +30,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import comp3011.assignment1.model.UptimeResponse;
 import comp3011.assignment1.service.ServerLifecycleService;
 
-//Loads only the Spring MVC/controller layer needed to test AdminController.
-//This keeps the test focused and avoids starting the whole application.
 @WebMvcTest(AdminController.class)
 public class AdminControllerTest {
 
-	// MockMvc lets us simulate HTTP requests to our controller without launching a
-	// real server on port 8080.
+	// MockMvc lets us simulate HTTP requests to our controller without launching a real server on port 8080.
 	@Autowired
 	private MockMvc mockMvc;
 
-	// Replaces the real ServerLifecycleService with a controlled mock.
-	// This lets us decide exactly what the service returns during each test.
+	// Replace real ServerLifecycleService with a controlled mock.
 	@MockitoBean
 	private ServerLifecycleService serverLifecycleService;
 
@@ -50,6 +49,7 @@ public class AdminControllerTest {
 		Instant now = Instant.parse("2026-09-09T00:01:30Z");
 
 		UptimeResponse response = new UptimeResponse(start, now, 90.0);
+		// keep the service predictable so the controller response can be checked
 
 		when(serverLifecycleService.getUptime()).thenReturn(response);
 
@@ -63,12 +63,9 @@ public class AdminControllerTest {
 	@Test
 	void getUptime_whenServiceFails_returnsStandard500Error() throws Exception {
 
-		// ARRANGE:
-		// Force the mocked service to fail so we can verify that the global exception
-		// handler converts the failure into the YAML error format.
+		// Arrange: Force mocked service to fail so we can verify that the global exception handler converts the failure into the YAML error format.
 		when(serverLifecycleService.getUptime()).thenThrow(new RuntimeException("simulated failure"));
 
-		// ACT + ASSERT:
 		// Send the request through the real controller.
 		mockMvc.perform(get("/api/v1/admin/uptime"))
 
@@ -84,19 +81,14 @@ public class AdminControllerTest {
 
 				.andExpect(jsonPath("$.path").value("/api/v1/admin/uptime"))
 
-				// The timestamp is generated at runtime, so we only verify that it exists
-				// rather than comparing it to a hard-coded value.
+				// The timestamp is generated at runtime, so we only verify that it exists rather than comparing it to a hard-coded value.
 				.andExpect(jsonPath("$.timestamp").exists());
 	}
 
 	@Test
 	void shutdownServer_whenAccepted_returns202() throws Exception {
-		// ARRANGE:
-		// shutdown() now returns true when this request successfully claims the right
-		// to initiate the graceful shutdown.
+		// Arrange: shutdown() now returns true when this request successfully claims the right to initiate the graceful shutdown.
 		when(serverLifecycleService.shutdown()).thenReturn(true);
-
-		// ACT + ASSERT:
 		// Send a simulated POST request to the shutdown endpoint.
 		mockMvc.perform(post("/api/v1/admin/shutdown"))
 
@@ -106,21 +98,17 @@ public class AdminControllerTest {
 				// Verify the response body matches the ShutdownResponse contract.
 				.andExpect(jsonPath("$.message").value("Graceful shutdown requested."));
 
-		// VERIFY:
-		// Confirm the controller delegated the actual shutdown responsibility
-		// to ServerLifecycleService exactly once.
+		
+		// Confirm the controller delegated the actual shutdown responsibility to ServerLifecycleService exactly once.
 		verify(serverLifecycleService, times(1)).shutdown();
 	}
 
 	@Test
 	void shutdownServer_whenAlreadyInProgress_returns409() throws Exception {
-
-		// ARRANGE:
-		// A false return value means another request has already
-		// initiated the graceful shutdown process.
+		// A false return value means another request has already initiated the graceful shutdown process.
 		when(serverLifecycleService.shutdown()).thenReturn(false);
 
-		// ACT + ASSERT:
+		// act and assert:
 		mockMvc.perform(post("/api/v1/admin/shutdown"))
 
 				// The OpenAPI YAML requires HTTP 409 Conflict.
@@ -145,19 +133,16 @@ public class AdminControllerTest {
 	@Test
 	void shutdownServer_whenServiceFails_returnsStandard500Error() throws Exception {
 
-		// ARRANGE:
-		// Simulate an unexpected internal failure while attempting
-		// to initiate the graceful shutdown process.
+		// Simulate an unexpected internal failure while attempting to initiate the graceful shutdown process.
 		when(serverLifecycleService.shutdown()).thenThrow(new RuntimeException("simulated shutdown failure"));
 
-		// ACT + ASSERT:
+		// a+a
 		mockMvc.perform(post("/api/v1/admin/shutdown"))
 
 				// An unexpected failure must be converted into HTTP 500.
 				.andExpect(status().isInternalServerError())
 
-				// Verify the response follows the ErrorResponse structure
-				// defined by the OpenAPI specification.
+				// Verify the response follows the ErrorResponse structure defined by the OpenAPI specification.
 				.andExpect(jsonPath("$.status").value(500))
 
 				.andExpect(jsonPath("$.error").value("Internal Server Error"))
@@ -166,8 +151,7 @@ public class AdminControllerTest {
 
 				.andExpect(jsonPath("$.path").value("/api/v1/admin/shutdown"))
 
-				// The timestamp is generated when the exception is handled,
-				// so its exact value should not be hard-coded.
+				// The timestamp is generated when the exception is handled, so its exact value should not be hard-coded.
 				.andExpect(jsonPath("$.timestamp").exists());
 
 		// Confirm that the controller attempted the shutdown operation.

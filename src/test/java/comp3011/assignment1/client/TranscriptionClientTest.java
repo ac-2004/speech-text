@@ -1,5 +1,8 @@
 package comp3011.assignment1.client;
 
+//regression test for the real transcription http client using a local stub server.
+//it checks request construction, authentication and response mapping without calling openai.
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,7 +46,7 @@ class TranscriptionClientTest {
 
 		String stubUrl = "http://localhost:" + port + "/v1/audio/transcriptions";
 
-		// Use the real client but point it at the fake server.
+		// use the real client but point it at the fake server.
 		transcriptionClient = new TranscriptionClient(WebClient.builder().build(), "test-api-key", stubUrl);
 	}
 
@@ -62,7 +65,7 @@ class TranscriptionClientTest {
 		// Create fake audio data for the request.
 		AudioData audio = new AudioData("fake audio".getBytes(StandardCharsets.UTF_8), "recording.webm", "audio/webm");
 
-		// Call the real TranscriptionClient.
+		// block only inside the test so the asynchronous result can be asserted
 		TranscriptionResponse response = transcriptionClient.transcribe(audio).block();
 
 		// Check that the response was parsed correctly.
@@ -84,6 +87,7 @@ class TranscriptionClientTest {
 		assertTrue(receivedRequestBody.contains("gpt-4o-mini-transcribe"));
 	}
 
+	// capture the outgoing request and return a predictable api-style response
 	private void handleTranscriptionRequest(HttpExchange exchange) throws IOException {
 
 		// Store request details so the test can check them later.

@@ -1,5 +1,7 @@
 package comp3011.assignment1;
 
+// starts the spring boot application and loads the application context.
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
