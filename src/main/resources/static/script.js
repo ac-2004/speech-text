@@ -93,6 +93,7 @@ recordButton.addEventListener('click', async () => {
 
             recordingUrl = URL.createObjectURL(blob);
             audioPlayer.src = recordingUrl;
+			audioPlayer.load();
 
             try {
 
