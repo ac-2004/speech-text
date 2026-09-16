@@ -158,7 +158,7 @@ recordButton.addEventListener('click', async () => {
 
         recordingStatus.textContent =
             'Recording in progress...';
-		console.log('recordingStatus element:', recordingStatus);
+        console.log('recordingStatus element:', recordingStatus);
 
         recordButton.disabled = true;
         stopButton.disabled = false;

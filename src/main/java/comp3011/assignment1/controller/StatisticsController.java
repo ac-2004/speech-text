@@ -10,13 +10,12 @@ import comp3011.assignment1.service.GlobalStatisticsService;
 public class StatisticsController {
 	private final GlobalStatisticsService globalStatisticsService;
 
-    public StatisticsController(
-            GlobalStatisticsService globalStatisticsService) {
-        this.globalStatisticsService = globalStatisticsService;
-    }
+	public StatisticsController(GlobalStatisticsService globalStatisticsService) {
+		this.globalStatisticsService = globalStatisticsService;
+	}
 
-    @GetMapping("/api/v1/global/stats")
-    public GlobalStatsResponse getGlobalStats() {
-        return globalStatisticsService.getStats();
-    }
+	@GetMapping("/api/v1/global/stats")
+	public GlobalStatsResponse getGlobalStats() {
+		return globalStatisticsService.getStats();
+	}
 }

@@ -1,90 +1,79 @@
 <!DOCTYPE html>
+<!-- provides the browser interface for recording audio and displaying transcription results. -->
 <html lang="en">
-	<head>
-		<meta charset="UTF-8">
 
-	    <!-- Makes the page display correctly on phones and smaller screens. -->
-	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>
+	<meta charset="UTF-8">
 
-	    <title>Speech to Text</title>
+	<!-- makes the page display correctly on phones and smaller screens. -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-	    <!-- Keep styling separate from page structure. -->
-	    <link rel="stylesheet" href="style.css">
-		
-	</head>
-	<body>
-		<main class="app-container">
+	<title>Speech to Text</title>
 
-	        <section class="transcription-card">
+	<!-- Keep styling separate from page structure. -->
+	<link rel="stylesheet" href="style.css">
 
-	            <header class="app-header">
-	                <h1>Speech to Text</h1>
+</head>
 
-	                <p class="app-description">
-	                    Record your voice and convert it into text.
-	                </p>
-	            </header>
+<body>
+	<main class="app-container">
 
+		<section class="transcription-card">
 
-	            <!-- Recording controls -->
-	            <div class="controls">
-	                <button
-	                    type="button"
-	                    class="button button-primary"
-	                    id="record-button">
-	                    Record
-	                </button>
+			<header class="app-header">
+				<h1>Speech to Text</h1>
 
-	                <button
-	                    type="button"
-	                    class="button button-secondary"
-	                    id="stop-button"
-	                    disabled>
-	                    Stop Recording
-	                </button>
-	            </div>
+				<p class="app-description">
+					Record your voice and convert it into text.
+				</p>
+			</header>
 
 
-	            <!--
+			<!-- Recording controls -->
+			<div class="controls">
+				<button type="button" class="button button-primary" id="record-button">
+					Record
+				</button>
+
+				<button type="button" class="button button-secondary" id="stop-button" disabled>
+					Stop Recording
+				</button>
+			</div>
+
+
+			<!--
 	                aria-live allows screen readers to announce application
 	                state changes such as recording, transcribing and errors.
 	            -->
-	            <p
-	                id="recording-status"
-	                class="status-message"
-	                role="status"
-	                aria-live="polite">
-	                Ready to record
-	            </p>
+			<p id="recording-status" class="status-message" role="status" aria-live="polite">
+				Ready to record
+			</p>
 
 
-	            <!-- Recorded audio playback -->
-	            <section class="audio-section">
-	                <h2>Your Recording</h2>
+			<!-- Recorded audio playback -->
+			<section class="audio-section">
+				<h2>Your Recording</h2>
 
-	                <audio
-	                    id="recorded-audio"
-	                    controls>
-	                </audio>
-	            </section>
+				<audio id="recorded-audio" controls>
+				</audio>
+			</section>
 
 
-	            <!-- Transcription output -->
-	            <section class="result-section">
-	                <h2>Transcription</h2>
+			<!-- Transcription output -->
+			<section class="result-section">
+				<h2>Transcription</h2>
 
-	                <div class="transcription-output">
-	                    <p
-	                        id="transcription-result"
-	                        aria-live="polite">
-	                    </p>
-	                </div>
-	            </section>
+				<div class="transcription-output">
+					<p id="transcription-result" aria-live="polite">
+					</p>
+				</div>
+			</section>
 
-	        </section>
+		</section>
 
-	    </main>
+	</main>
 
-	    <script src="script.js"></script>
-	</body>
+	<script src="script.js"></script>
+</body>
+
 </html>

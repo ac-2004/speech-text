@@ -21,163 +21,100 @@ import comp3011.assignment1.model.TranscriptionResponse;
 
 class TranscriptionClientTest {
 
-    private HttpServer stubServer;
-    private TranscriptionClient transcriptionClient;
+	private HttpServer stubServer;
+	private TranscriptionClient transcriptionClient;
 
-    private String receivedAuthorization;
-    private String receivedContentType;
-    private String receivedRequestBody;
+	private String receivedAuthorization;
+	private String receivedContentType;
+	private String receivedRequestBody;
 
+	@BeforeEach
+	void setUp() throws IOException {
 
-    @BeforeEach
-    void setUp() throws IOException {
+		// Start a local fake transcription server on a free port.
+		stubServer = HttpServer.create(new InetSocketAddress(0), 0);
 
-        // Start a local fake transcription server on a free port.
-        stubServer = HttpServer.create(
-                new InetSocketAddress(0),
-                0
-        );
+		// Handle requests sent to the transcription endpoint.
+		stubServer.createContext("/v1/audio/transcriptions", this::handleTranscriptionRequest);
 
-        // Handle requests sent to the transcription endpoint.
-        stubServer.createContext(
-                "/v1/audio/transcriptions",
-                this::handleTranscriptionRequest
-        );
+		stubServer.start();
 
-        stubServer.start();
+		int port = stubServer.getAddress().getPort();
 
-        int port = stubServer.getAddress().getPort();
+		String stubUrl = "http://localhost:" + port + "/v1/audio/transcriptions";
 
-        String stubUrl =
-                "http://localhost:"
-                        + port
-                        + "/v1/audio/transcriptions";
+		// Use the real client but point it at the fake server.
+		transcriptionClient = new TranscriptionClient(WebClient.builder().build(), "test-api-key", stubUrl);
+	}
 
-        // Use the real client but point it at the fake server.
-        transcriptionClient = new TranscriptionClient(
-                WebClient.builder().build(),
-                "test-api-key",
-                stubUrl
-        );
-    }
+	@AfterEach
+	void tearDown() {
 
+		// Stop the fake server after the test finishes.
+		if (stubServer != null) {
+			stubServer.stop(0);
+		}
+	}
 
-    @AfterEach
-    void tearDown() {
+	@Test
+	void transcribe_sendsMultipartRequestAndParsesResponse() {
 
-        // Stop the fake server after the test finishes.
-        if (stubServer != null) {
-            stubServer.stop(0);
-        }
-    }
+		// Create fake audio data for the request.
+		AudioData audio = new AudioData("fake audio".getBytes(StandardCharsets.UTF_8), "recording.webm", "audio/webm");
 
+		// Call the real TranscriptionClient.
+		TranscriptionResponse response = transcriptionClient.transcribe(audio).block();
 
-    @Test
-    void transcribe_sendsMultipartRequestAndParsesResponse() {
+		// Check that the response was parsed correctly.
+		assertEquals("stub transcription", response.text());
 
-        // Create fake audio data for the request.
-        AudioData audio = new AudioData(
-                "fake audio".getBytes(StandardCharsets.UTF_8),
-                "recording.webm",
-                "audio/webm"
-        );
+		assertEquals(12, response.usage().inputTokens());
 
-        // Call the real TranscriptionClient.
-        TranscriptionResponse response =
-                transcriptionClient.transcribe(audio).block();
+		assertEquals(4, response.usage().outputTokens());
 
-        // Check that the response was parsed correctly.
-        assertEquals(
-                "stub transcription",
-                response.text()
-        );
+		// Check that Bearer authentication was included.
+		assertEquals("Bearer test-api-key", receivedAuthorization);
 
-        assertEquals(
-                12,
-                response.usage().inputTokens()
-        );
+		// Check that the request was multipart/form-data.
+		assertTrue(receivedContentType.startsWith("multipart/form-data"));
 
-        assertEquals(
-                4,
-                response.usage().outputTokens()
-        );
+		// Check that important multipart values were sent.
+		assertTrue(receivedRequestBody.contains("recording.webm"));
 
-        // Check that Bearer authentication was included.
-        assertEquals(
-                "Bearer test-api-key",
-                receivedAuthorization
-        );
+		assertTrue(receivedRequestBody.contains("gpt-4o-mini-transcribe"));
+	}
 
-        // Check that the request was multipart/form-data.
-        assertTrue(
-                receivedContentType.startsWith(
-                        "multipart/form-data"
-                )
-        );
+	private void handleTranscriptionRequest(HttpExchange exchange) throws IOException {
 
-        // Check that important multipart values were sent.
-        assertTrue(
-                receivedRequestBody.contains(
-                        "recording.webm"
-                )
-        );
+		// Store request details so the test can check them later.
+		receivedAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
 
-        assertTrue(
-                receivedRequestBody.contains(
-                        "gpt-4o-mini-transcribe"
-                )
-        );
-    }
+		receivedContentType = exchange.getRequestHeaders().getFirst("Content-Type");
 
+		receivedRequestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.ISO_8859_1);
 
-    private void handleTranscriptionRequest(
-            HttpExchange exchange) throws IOException {
+		// Return a fake response shaped like the real STT API response.
+		String responseBody = """
+				{
+				    "text": "stub transcription",
+				    "usage": {
+				        "type": "tokens",
+				        "input_tokens": 12,
+				        "output_tokens": 4,
+				        "total_tokens": 16
+				    }
+				}
+				""";
 
-        // Store request details so the test can check them later.
-        receivedAuthorization =
-                exchange.getRequestHeaders()
-                        .getFirst("Authorization");
+		byte[] responseBytes = responseBody.getBytes(StandardCharsets.UTF_8);
 
-        receivedContentType =
-                exchange.getRequestHeaders()
-                        .getFirst("Content-Type");
+		exchange.getResponseHeaders().add("Content-Type", "application/json");
 
-        receivedRequestBody =
-                new String(
-                        exchange.getRequestBody().readAllBytes(),
-                        StandardCharsets.ISO_8859_1
-                );
+		exchange.sendResponseHeaders(200, responseBytes.length);
 
-        // Return a fake response shaped like the real STT API response.
-        String responseBody = """
-                {
-                    "text": "stub transcription",
-                    "usage": {
-                        "type": "tokens",
-                        "input_tokens": 12,
-                        "output_tokens": 4,
-                        "total_tokens": 16
-                    }
-                }
-                """;
+		try (OutputStream outputStream = exchange.getResponseBody()) {
 
-        byte[] responseBytes =
-                responseBody.getBytes(StandardCharsets.UTF_8);
-
-        exchange.getResponseHeaders().add(
-                "Content-Type",
-                "application/json"
-        );
-
-        exchange.sendResponseHeaders(
-                200,
-                responseBytes.length
-        );
-
-        try (OutputStream outputStream =
-                     exchange.getResponseBody()) {
-
-            outputStream.write(responseBytes);
-        }
-    }
+			outputStream.write(responseBytes);
+		}
+	}
 }

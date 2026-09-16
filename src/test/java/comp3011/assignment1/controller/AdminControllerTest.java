@@ -1,219 +1,176 @@
 package comp3011.assignment1.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import comp3011.assignment1.service.ServerLifecycleService;
+import static org.mockito.Mockito.times;
+//Lets Mockito verify that the controller actually asked
+//the lifecycle service to begin shutdown.
+import static org.mockito.Mockito.verify;
+//Lets Mockito define what our fake ServerLifecycleService should return.
+import static org.mockito.Mockito.when;
+//Creates a simulated HTTP GET request.
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+//Lets MockMvc simulate an HTTP POST request.
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+//Lets us check the HTTP status and JSON returned by the controller.
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 //Used to create fixed timestamps for our predictable test response.
 import java.time.Instant;
 
 //Marks a method as a JUnit test.
 import org.junit.jupiter.api.Test;
-
-//Lets Mockito define what our fake ServerLifecycleService should return.
-import static org.mockito.Mockito.when;
-
-//Creates a simulated HTTP GET request.
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-
-//Lets us check the HTTP status and JSON returned by the controller.
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 import comp3011.assignment1.model.UptimeResponse;
-
-//Lets Mockito configure the mock to throw an exception.
-import static org.mockito.Mockito.doThrow;
-
-//Lets MockMvc simulate an HTTP POST request.
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-
-//Lets Mockito verify that the controller actually asked
-//the lifecycle service to begin shutdown.
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
+import comp3011.assignment1.service.ServerLifecycleService;
 
 //Loads only the Spring MVC/controller layer needed to test AdminController.
 //This keeps the test focused and avoids starting the whole application.
 @WebMvcTest(AdminController.class)
 public class AdminControllerTest {
-	
-	// MockMvc lets us simulate HTTP requests to our controller without launching a real server on port 8080.
+
+	// MockMvc lets us simulate HTTP requests to our controller without launching a
+	// real server on port 8080.
 	@Autowired
-    private MockMvc mockMvc;
+	private MockMvc mockMvc;
 
 	// Replaces the real ServerLifecycleService with a controlled mock.
-    // This lets us decide exactly what the service returns during each test.
-    @MockitoBean
-    private ServerLifecycleService serverLifecycleService;
-    
-    @Test
-    void getUptime_returnsCorrectUptimeResponse() throws Exception {
+	// This lets us decide exactly what the service returns during each test.
+	@MockitoBean
+	private ServerLifecycleService serverLifecycleService;
 
-        // Arrange: use fixed values so the test is deterministic.
-        Instant start = Instant.parse("2026-09-09T00:00:00Z");
-        Instant now = Instant.parse("2026-09-09T00:01:30Z");
+	@Test
+	void getUptime_returnsCorrectUptimeResponse() throws Exception {
 
-        UptimeResponse response =
-                new UptimeResponse(start, now, 90.0);
+		// Arrange: use fixed values so the test is deterministic.
+		Instant start = Instant.parse("2026-09-09T00:00:00Z");
+		Instant now = Instant.parse("2026-09-09T00:01:30Z");
 
-        when(serverLifecycleService.getUptime())
-                .thenReturn(response);
+		UptimeResponse response = new UptimeResponse(start, now, 90.0);
 
-        // Act + Assert: verify the endpoint contract.
-        mockMvc.perform(get("/api/v1/admin/uptime"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.utcServerStart")
-                        .value("2026-09-09T00:00:00Z"))
-                .andExpect(jsonPath("$.utcNow")
-                        .value("2026-09-09T00:01:30Z"))
-                .andExpect(jsonPath("$.serverUptimeSeconds")
-                        .value(90.0));
-    }
-    
-    @Test
-    void getUptime_whenServiceFails_returnsStandard500Error() throws Exception {
+		when(serverLifecycleService.getUptime()).thenReturn(response);
 
-        // ARRANGE:
-        // Force the mocked service to fail so we can verify that the global exception handler converts the failure into the YAML error format.
-        when(serverLifecycleService.getUptime())
-                .thenThrow(new RuntimeException("simulated failure"));
+		// Act + Assert: verify the endpoint contract.
+		mockMvc.perform(get("/api/v1/admin/uptime")).andExpect(status().isOk())
+				.andExpect(jsonPath("$.utcServerStart").value("2026-09-09T00:00:00Z"))
+				.andExpect(jsonPath("$.utcNow").value("2026-09-09T00:01:30Z"))
+				.andExpect(jsonPath("$.serverUptimeSeconds").value(90.0));
+	}
 
-        // ACT + ASSERT:
-        // Send the request through the real controller.
-        mockMvc.perform(
-                get("/api/v1/admin/uptime")
-        )
+	@Test
+	void getUptime_whenServiceFails_returnsStandard500Error() throws Exception {
 
-        // The API contract requires an unexpected failure to return HTTP 500.
-        .andExpect(status().isInternalServerError())
+		// ARRANGE:
+		// Force the mocked service to fail so we can verify that the global exception
+		// handler converts the failure into the YAML error format.
+		when(serverLifecycleService.getUptime()).thenThrow(new RuntimeException("simulated failure"));
 
-        // Verify the fixed fields required by ErrorResponse.
-        .andExpect(jsonPath("$.status")
-                .value(500))
+		// ACT + ASSERT:
+		// Send the request through the real controller.
+		mockMvc.perform(get("/api/v1/admin/uptime"))
 
-        .andExpect(jsonPath("$.error")
-                .value("Internal Server Error"))
+				// The API contract requires an unexpected failure to return HTTP 500.
+				.andExpect(status().isInternalServerError())
 
-        .andExpect(jsonPath("$.message")
-                .value("An unexpected server error occurred."))
+				// Verify the fixed fields required by ErrorResponse.
+				.andExpect(jsonPath("$.status").value(500))
 
-        .andExpect(jsonPath("$.path")
-                .value("/api/v1/admin/uptime"))
+				.andExpect(jsonPath("$.error").value("Internal Server Error"))
 
-        // The timestamp is generated at runtime, so we only verify that it exists
-        // rather than comparing it to a hard-coded value.
-        .andExpect(jsonPath("$.timestamp").exists());
-    }
-    
-    @Test
-    void shutdownServer_whenAccepted_returns202() throws Exception {
-    	// ARRANGE:
-        // shutdown() now returns true when this request successfully claims the right to initiate the graceful shutdown.
-    	    when(serverLifecycleService.shutdown())
-                .thenReturn(true);
+				.andExpect(jsonPath("$.message").value("An unexpected server error occurred."))
 
-        // ACT + ASSERT:
-        // Send a simulated POST request to the shutdown endpoint.
-        mockMvc.perform(
-                post("/api/v1/admin/shutdown")
-        )
+				.andExpect(jsonPath("$.path").value("/api/v1/admin/uptime"))
 
-        // The YAML requires a successful shutdown request to return 202 Accepted.
-        .andExpect(status().isAccepted())
+				// The timestamp is generated at runtime, so we only verify that it exists
+				// rather than comparing it to a hard-coded value.
+				.andExpect(jsonPath("$.timestamp").exists());
+	}
 
-        // Verify the response body matches the ShutdownResponse contract.
-        .andExpect(jsonPath("$.message")
-                .value("Graceful shutdown requested."));
+	@Test
+	void shutdownServer_whenAccepted_returns202() throws Exception {
+		// ARRANGE:
+		// shutdown() now returns true when this request successfully claims the right
+		// to initiate the graceful shutdown.
+		when(serverLifecycleService.shutdown()).thenReturn(true);
 
-        // VERIFY:
-        // Confirm the controller delegated the actual shutdown responsibility
-        // to ServerLifecycleService exactly once.
-        verify(serverLifecycleService, times(1))
-                .shutdown();
-    }
-    
-    @Test
-    void shutdownServer_whenAlreadyInProgress_returns409() throws Exception {
+		// ACT + ASSERT:
+		// Send a simulated POST request to the shutdown endpoint.
+		mockMvc.perform(post("/api/v1/admin/shutdown"))
 
-        // ARRANGE:
-        // A false return value means another request has already
-        // initiated the graceful shutdown process.
-        when(serverLifecycleService.shutdown())
-                .thenReturn(false);
+				// The YAML requires a successful shutdown request to return 202 Accepted.
+				.andExpect(status().isAccepted())
 
-        // ACT + ASSERT:
-        mockMvc.perform(
-                post("/api/v1/admin/shutdown")
-        )
+				// Verify the response body matches the ShutdownResponse contract.
+				.andExpect(jsonPath("$.message").value("Graceful shutdown requested."));
 
-        // The OpenAPI YAML requires HTTP 409 Conflict.
-        .andExpect(status().isConflict())
+		// VERIFY:
+		// Confirm the controller delegated the actual shutdown responsibility
+		// to ServerLifecycleService exactly once.
+		verify(serverLifecycleService, times(1)).shutdown();
+	}
 
-        // Verify the standard ErrorResponse fields.
-        .andExpect(jsonPath("$.status")
-                .value(409))
+	@Test
+	void shutdownServer_whenAlreadyInProgress_returns409() throws Exception {
 
-        .andExpect(jsonPath("$.error")
-                .value("Conflict"))
+		// ARRANGE:
+		// A false return value means another request has already
+		// initiated the graceful shutdown process.
+		when(serverLifecycleService.shutdown()).thenReturn(false);
 
-        .andExpect(jsonPath("$.message")
-                .value("Graceful shutdown is already in progress."))
+		// ACT + ASSERT:
+		mockMvc.perform(post("/api/v1/admin/shutdown"))
 
-        .andExpect(jsonPath("$.path")
-                .value("/api/v1/admin/shutdown"))
+				// The OpenAPI YAML requires HTTP 409 Conflict.
+				.andExpect(status().isConflict())
 
-        // Generated dynamically, so only check that it exists.
-        .andExpect(jsonPath("$.timestamp")
-                .exists());
+				// Verify the standard ErrorResponse fields.
+				.andExpect(jsonPath("$.status").value(409))
 
-        // Confirm the controller checked the lifecycle service exactly once.
-        verify(serverLifecycleService, times(1))
-                .shutdown();
-    }
-    
-    @Test
-    void shutdownServer_whenServiceFails_returnsStandard500Error()
-            throws Exception {
+				.andExpect(jsonPath("$.error").value("Conflict"))
 
-        // ARRANGE:
-        // Simulate an unexpected internal failure while attempting
-        // to initiate the graceful shutdown process.
-        when(serverLifecycleService.shutdown())
-                .thenThrow(new RuntimeException("simulated shutdown failure"));
+				.andExpect(jsonPath("$.message").value("Graceful shutdown is already in progress."))
 
-        // ACT + ASSERT:
-        mockMvc.perform(
-                post("/api/v1/admin/shutdown")
-        )
+				.andExpect(jsonPath("$.path").value("/api/v1/admin/shutdown"))
 
-        // An unexpected failure must be converted into HTTP 500.
-        .andExpect(status().isInternalServerError())
+				// Generated dynamically, so only check that it exists.
+				.andExpect(jsonPath("$.timestamp").exists());
 
-        // Verify the response follows the ErrorResponse structure
-        // defined by the OpenAPI specification.
-        .andExpect(jsonPath("$.status")
-                .value(500))
+		// Confirm the controller checked the lifecycle service exactly once.
+		verify(serverLifecycleService, times(1)).shutdown();
+	}
 
-        .andExpect(jsonPath("$.error")
-                .value("Internal Server Error"))
+	@Test
+	void shutdownServer_whenServiceFails_returnsStandard500Error() throws Exception {
 
-        .andExpect(jsonPath("$.message")
-                .value("An unexpected server error occurred."))
+		// ARRANGE:
+		// Simulate an unexpected internal failure while attempting
+		// to initiate the graceful shutdown process.
+		when(serverLifecycleService.shutdown()).thenThrow(new RuntimeException("simulated shutdown failure"));
 
-        .andExpect(jsonPath("$.path")
-                .value("/api/v1/admin/shutdown"))
+		// ACT + ASSERT:
+		mockMvc.perform(post("/api/v1/admin/shutdown"))
 
-        // The timestamp is generated when the exception is handled,
-        // so its exact value should not be hard-coded.
-        .andExpect(jsonPath("$.timestamp")
-                .exists());
+				// An unexpected failure must be converted into HTTP 500.
+				.andExpect(status().isInternalServerError())
 
-        // Confirm that the controller attempted the shutdown operation.
-        verify(serverLifecycleService, times(1))
-                .shutdown();
-    }
+				// Verify the response follows the ErrorResponse structure
+				// defined by the OpenAPI specification.
+				.andExpect(jsonPath("$.status").value(500))
+
+				.andExpect(jsonPath("$.error").value("Internal Server Error"))
+
+				.andExpect(jsonPath("$.message").value("An unexpected server error occurred."))
+
+				.andExpect(jsonPath("$.path").value("/api/v1/admin/shutdown"))
+
+				// The timestamp is generated when the exception is handled,
+				// so its exact value should not be hard-coded.
+				.andExpect(jsonPath("$.timestamp").exists());
+
+		// Confirm that the controller attempted the shutdown operation.
+		verify(serverLifecycleService, times(1)).shutdown();
+	}
 }

@@ -1,7 +1,6 @@
 package comp3011.assignment1.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -19,69 +18,40 @@ import reactor.core.publisher.Mono;
 
 class TranscriptionServiceTest {
 
-    @Test
-    void transcribe_returnsTextAndUpdatesGlobalStatistics() {
+	@Test
+	void transcribe_returnsTextAndUpdatesGlobalStatistics() {
 
-        // Mock the external transcription client.
-        TranscriptionClient transcriptionClient =
-                mock(TranscriptionClient.class);
+		// Mock the external transcription client.
+		TranscriptionClient transcriptionClient = mock(TranscriptionClient.class);
 
-        // Use the real statistics service.
-        GlobalStatisticsService globalStatisticsService =
-                new GlobalStatisticsService();
+		// Use the real statistics service.
+		GlobalStatisticsService globalStatisticsService = new GlobalStatisticsService();
 
-        // Test the real transcription service.
-        TranscriptionService transcriptionService =
-                new TranscriptionService(
-                        transcriptionClient,
-                        globalStatisticsService
-                );
+		// Test the real transcription service.
+		TranscriptionService transcriptionService = new TranscriptionService(transcriptionClient,
+				globalStatisticsService);
 
-        AudioData audio = new AudioData(
-                "fake audio".getBytes(StandardCharsets.UTF_8),
-                "recording.webm",
-                "audio/webm"
-        );
+		AudioData audio = new AudioData("fake audio".getBytes(StandardCharsets.UTF_8), "recording.webm", "audio/webm");
 
-        TranscriptionUsage usage =
-                new TranscriptionUsage(
-                        10,
-                        5
-                );
+		TranscriptionUsage usage = new TranscriptionUsage(10, 5);
 
-        TranscriptionResponse response =
-                new TranscriptionResponse(
-                        "hello world",
-                        usage
-                );
+		TranscriptionResponse response = new TranscriptionResponse("hello world", usage);
 
-        // Pretend the STT API returned the response above.
-        when(transcriptionClient.transcribe(any(AudioData.class)))
-                .thenReturn(Mono.just(response));
+		// Pretend the STT API returned the response above.
+		when(transcriptionClient.transcribe(any(AudioData.class))).thenReturn(Mono.just(response));
 
-        // Run the real service logic.
-        String transcription =
-                transcriptionService.transcribe(audio).block();
+		// Run the real service logic.
+		String transcription = transcriptionService.transcribe(audio).block();
 
-        // Check that the transcription text is returned.
-        assertEquals(
-                "hello world",
-                transcription
-        );
+		// Check that the transcription text is returned.
+		assertEquals("hello world", transcription);
 
-        // Read the statistics after transcription.
-        GlobalStatsResponse stats =
-                globalStatisticsService.getStats();
+		// Read the statistics after transcription.
+		GlobalStatsResponse stats = globalStatisticsService.getStats();
 
-        // Check that token usage was recorded correctly.
-        assertEquals(
-                10,
-                stats.inputTokens()
-        );
+		// Check that token usage was recorded correctly.
+		assertEquals(10, stats.inputTokens());
 
-        assertEquals(
-                5,
-                stats.outputTokens()
-        );
-    }
+		assertEquals(5, stats.outputTokens());
+	}
 }

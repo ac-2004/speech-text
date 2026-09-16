@@ -7,3 +7,7 @@ Ensure to ADD:
 3. go through code and clean it up, remove anythiing redundant
 
 4 transcription currency test file looks very ai
+
+5. do i have regression test to surface race conditions? R2
+
+6. have i explained why certain tests were developed? their expected results and assurances they provide?
